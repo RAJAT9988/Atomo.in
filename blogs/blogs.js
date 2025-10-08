@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Use the reverse proxy URL
     let allBlogs = [];
     let dataSource = 'server';
-    const serverBaseUrl = 'https://atomo.in'; // Use the domain with HTTPS
+    const serverBaseUrl = 'https://192.168.1.111:3001'; // Use the domain with HTTPS
 
     try {
       debugLog('Attempting to fetch from server...');
@@ -61,6 +61,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Store the server URL for use in detail pages
     localStorage.setItem('blogServerUrl', serverBaseUrl);
 
+    // Sort blogs by date descending (latest first), fallback to id number if date invalid
+    const getIdNum = (id) => {
+      const match = (id || '').toString().match(/\d+/);
+      return match ? parseInt(match[0]) : 0;
+    };
+    allBlogs.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      if (!isNaN(dateA) && !isNaN(dateB)) {
+        return dateB - dateA;
+      }
+      return getIdNum(b.id) - getIdNum(a.id); // Higher id number is newer
+    });
+    debugLog('Sorted blogs: ' + allBlogs.map(b => `${b.title} (${b.date}, id: ${b.id})`).join(', '));
+
+    // ===== 1. LATEST BLOG (First Page) =====
+    debugLog('Rendering latest blog...');
+    const latestContainer = document.querySelector('#first-page .cards');
+    const blogDetailPath = './blog-detail.html';
+
+    function renderLatest(blog) {
+      const previewText = stripHTML(blog.content || '').substring(0, 150) + '...';
+
+      // Populate existing highlight card
+      const highlightH2 = latestContainer.querySelector('.card.highlight .highlight-content h2');
+      if (highlightH2) highlightH2.textContent = blog.title;
+
+      const highlightP = latestContainer.querySelector('.card.highlight .highlight-content p');
+      if (highlightP) highlightP.textContent = blog.subtitle || '';
+
+      // Populate existing info card
+      const infoP = latestContainer.querySelector('.card.info p');
+      if (infoP) infoP.textContent = `${blog.category} · ${blog.date || new Date().toLocaleDateString()}`;
+
+      const infoH2 = latestContainer.querySelector('.card.info h2');
+      if (infoH2) infoH2.textContent = blog.title;
+
+      const infoP2 = latestContainer.querySelectorAll('.card.info p')[1];
+      if (infoP2) infoP2.textContent = previewText;
+
+      const infoA = latestContainer.querySelector('.card.info a');
+      if (infoA) infoA.href = `${blogDetailPath}?id=${blog.id || blog.slug}`;
+    }
+
+    if (allBlogs.length > 0) {
+      renderLatest(allBlogs[0]);
+      // Remove the latest blog from allBlogs for second page rendering
+      allBlogs.splice(0, 1);
+    }
+
     // ===== 2. FEATURE INSIGHTS (Main Grid) =====
     debugLog('Rendering main blog grid...');
     const insightsContainer = document.querySelector('#second-page .cards');
@@ -70,17 +120,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     let visibleCount = 6;
     let currentCategory = 'All Insight';
     let searchQuery = '';
-    let currentDisplayedBlogs = allBlogs;
+    let currentDisplayedBlogs;
 
     function getFilteredBlogs() {
-      let blogs = allBlogs;
-      
+      let blogs = allBlogs; // allBlogs already excludes latest
+
       if (currentCategory !== 'All Insight') {
         blogs = blogs.filter(blog => blog.category === currentCategory);
       }
-      
+
       if (searchQuery) {
-        blogs = blogs.filter(blog => 
+        blogs = blogs.filter(blog =>
           (blog.title?.toLowerCase().includes(searchQuery) ?? false) ||
           (blog.subtitle?.toLowerCase().includes(searchQuery) ?? false) ||
           (blog.content?.toLowerCase().includes(searchQuery) ?? false) ||
@@ -88,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           (blog.author?.toLowerCase().includes(searchQuery) ?? false)
         );
       }
-      
+
       return blogs;
     }
 
@@ -142,10 +192,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ===== 3. CATEGORY FILTERS =====
     document.querySelectorAll('.category-buttons button').forEach(button => {
       button.addEventListener('click', () => {
-        document.querySelectorAll('.category-buttons button').forEach(btn =>
+        document.querySelectorAll('.category-buttons button').forEach(btn => 
           btn.classList.remove('active'));
         button.classList.add('active');
-
+        
         currentCategory = button.textContent;
         currentDisplayedBlogs = getFilteredBlogs();
         visibleCount = 6;

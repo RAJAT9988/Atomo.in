@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Use the reverse proxy URL
     let allBlogs = [];
     let dataSource = 'server';
-    const serverBaseUrl = 'https://192.168.1.111:3001'; // Use the domain with HTTPS
+    const serverBaseUrl = 'https://atomo.in'; // Use the domain with HTTPS
 
     try {
       debugLog('Attempting to fetch from server...');
@@ -55,7 +55,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Update image path logic to use serverBaseUrl
     function getImagePath(imageFile) {
-      return `${dataSource === 'server' ? serverBaseUrl + '/uploads/' : './assets/'}${imageFile}`;
+      if (dataSource === 'server') {
+        return `${serverBaseUrl}/uploads/${imageFile}`;
+      } else {
+        // Use absolute path for consistency with your HTML
+        return `/assets/${imageFile}`;
+      }
     }
 
     // Store the server URL for use in detail pages
@@ -120,17 +125,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     let visibleCount = 6;
     let currentCategory = 'All Insight';
     let searchQuery = '';
-    let currentDisplayedBlogs;
+    let currentDisplayedBlogs = allBlogs; // Now allBlogs excludes the latest blog
 
     function getFilteredBlogs() {
       let blogs = allBlogs; // allBlogs already excludes latest
-
+      
       if (currentCategory !== 'All Insight') {
         blogs = blogs.filter(blog => blog.category === currentCategory);
       }
-
+      
       if (searchQuery) {
-        blogs = blogs.filter(blog =>
+        blogs = blogs.filter(blog => 
           (blog.title?.toLowerCase().includes(searchQuery) ?? false) ||
           (blog.subtitle?.toLowerCase().includes(searchQuery) ?? false) ||
           (blog.content?.toLowerCase().includes(searchQuery) ?? false) ||
@@ -138,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           (blog.author?.toLowerCase().includes(searchQuery) ?? false)
         );
       }
-
+      
       return blogs;
     }
 
@@ -167,7 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="author">
                         <img src="${imagePath}" 
                              alt="${blog.author || 'Author'}"
-                             onerror="this.src='./assets/default-author.jpg'; console.error('Failed to load image: ${imagePath}');">
+                             onerror="this.src='/assets/default-author.jpg'; console.error('Failed to load image: ${imagePath}');">
                         <span>${blog.author || 'Anonymous'}<br>${blog.position || 'Writer'}</span>
                     </div>
                     <p class="date">${blog.date || new Date().toLocaleDateString()}</p>
@@ -192,10 +197,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ===== 3. CATEGORY FILTERS =====
     document.querySelectorAll('.category-buttons button').forEach(button => {
       button.addEventListener('click', () => {
-        document.querySelectorAll('.category-buttons button').forEach(btn => 
+        document.querySelectorAll('.category-buttons button').forEach(btn =>
           btn.classList.remove('active'));
         button.classList.add('active');
-        
+
         currentCategory = button.textContent;
         currentDisplayedBlogs = getFilteredBlogs();
         visibleCount = 6;

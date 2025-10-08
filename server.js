@@ -26,7 +26,7 @@ const auth = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: 'v4', auth });
 
 
-const SPREADSHEET_ID = '1S4ZppgHv57MLar31qWjM-doACDg_Xfg22bWw_-0XykM';
+const SPREADSHEET_ID = '';
 
 // Helper function to append data to sheet
 async function appendToSheet(sheetName, values) {
